@@ -642,7 +642,7 @@ function setupPWA(){
   try{
     const c=document.createElement('canvas');c.width=c.height=180;const x=c.getContext('2d');
     x.fillStyle='#1c1c1e';x.fillRect(0,0,180,180);
-    x.font='118px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillText('🎓',90,98);
+    x.fillStyle='#ffffff';x.font='700 118px -apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillText('N',90,98);
     const png=c.toDataURL('image/png');
     $('#touchIcon').href=png;$('#favIcon').href=png;
     const m={name:'Notenübersicht',short_name:'Noten',start_url:location.href.split('#')[0],scope:new URL('./',location.href).href,display:'standalone',background_color:'#f6f6f3',theme_color:'#f6f6f3',icons:[{src:png,sizes:'180x180',type:'image/png'}]};

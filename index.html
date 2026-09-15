@@ -642,7 +642,10 @@ function setupPWA(){
   try{
     const c=document.createElement('canvas');c.width=c.height=180;const x=c.getContext('2d');
     x.fillStyle='#1c1c1e';x.fillRect(0,0,180,180);
-    x.fillStyle='#ffffff';x.font='700 118px -apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillText('N',90,98);
+    x.fillStyle='#ffffff';x.font='700 118px -apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif';x.textAlign='left';x.textBaseline='alphabetic';
+    /* Buchstaben exakt über seine gemessene Box zentrieren (nicht über die Zeilenhöhe) */
+    const m=x.measureText('N'),w=m.actualBoundingBoxLeft+m.actualBoundingBoxRight,hh=m.actualBoundingBoxAscent+m.actualBoundingBoxDescent;
+    x.fillText('N',90-w/2+m.actualBoundingBoxLeft,90+hh/2-m.actualBoundingBoxDescent);
     const png=c.toDataURL('image/png');
     $('#touchIcon').href=png;$('#favIcon').href=png;
     const m={name:'Notenübersicht',short_name:'Noten',start_url:location.href.split('#')[0],scope:new URL('./',location.href).href,display:'standalone',background_color:'#f6f6f3',theme_color:'#f6f6f3',icons:[{src:png,sizes:'180x180',type:'image/png'}]};

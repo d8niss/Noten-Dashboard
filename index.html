@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Notenübersicht</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Noten">
+<meta name="theme-color" id="themeColor" content="#f6f6f3">
+<link rel="apple-touch-icon" id="touchIcon" href="">
+<link rel="icon" id="favIcon" href="">
+<link rel="manifest" id="manifest" href="">
+<style>
+:root{
+  --bg:#f6f6f3; --surface:#ffffff; --text:#1a1a1a; --muted:#6f6f6a; --line:#e4e4df; --line2:#d3d3cd;
+  --accent:#1a1a1a; --accent-fg:#ffffff; --red:#c0392b; --green:#2e7d4f;
+  --gs:58%; --gl:36%;               /* Sättigung/Helligkeit der Notenfarben */
+  --shadow:0 -4px 30px rgba(0,0,0,.12);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#121212; --surface:#1c1c1e; --text:#ececea; --muted:#8a8a86; --line:#2a2a2c; --line2:#3a3a3c;
+    --accent:#ececea; --accent-fg:#121212; --red:#e0665a; --green:#6fbf8a;
+    --gs:38%; --gl:64%;
+    --shadow:0 -4px 30px rgba(0,0,0,.5);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#121212; --surface:#1c1c1e; --text:#ececea; --muted:#8a8a86; --line:#2a2a2c; --line2:#3a3a3c;
+  --accent:#ececea; --accent-fg:#121212; --red:#e0665a; --green:#6fbf8a;
+  --gs:38%; --gl:64%;
+  --shadow:0 -4px 30px rgba(0,0,0,.5);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%;background:var(--bg)}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:16px;line-height:1.4;color:var(--text);background:var(--bg);min-height:100vh;padding-bottom:env(safe-area-inset-bottom,0px);-webkit-tap-highlight-color:transparent;font-variant-numeric:tabular-nums}
+body.sheet-open{overflow:hidden}
+button,input,select{font:inherit;color:inherit;background:none;border:0;border-radius:0}
+button{cursor:pointer;touch-action:manipulation}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:640px;margin:0 auto;padding-inline:16px}
+.muted{color:var(--muted)}
+.note{font-size:13px;color:var(--muted);line-height:1.45}
+[hidden]{display:none!important}
+svg{display:block}
+
+/* Kopf */
+header{position:sticky;top:0;z-index:5;background:var(--bg);padding-top:env(safe-area-inset-top,0px)}
+.hbar{display:flex;align-items:center;gap:2px;height:52px}
+.year-btn{display:flex;align-items:center;gap:4px;font-weight:600;font-size:18px;padding:8px 4px 8px 0;min-width:0;letter-spacing:-.01em}
+.year-btn span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.year-btn svg{color:var(--muted);flex-shrink:0}
+.spacer{flex:1}
+.icon-btn{width:40px;height:40px;display:grid;place-items:center;border-radius:10px;color:var(--muted);flex-shrink:0}
+.icon-btn:active{background:var(--line)}
+.icon-btn svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.ic-sun{display:none}
+:root[data-theme="dark"] .ic-sun{display:block}
+:root[data-theme="dark"] .ic-moon{display:none}
+.tabs{display:flex;gap:2px;background:var(--line);border-radius:10px;padding:2px;margin:2px 0 8px}
+.tabs button{flex:1;padding:7px 0;border-radius:8px;font-size:14px;color:var(--muted)}
+.tabs button.on{background:var(--surface);color:var(--text);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+
+/* Zusammenfassung */
+.summary{display:flex;align-items:baseline;gap:12px;padding:14px 0 18px;flex-wrap:wrap}
+.summary .big{font-size:36px;font-weight:700;letter-spacing:-.03em;line-height:1}
+.summary .big.none{color:var(--line2)}
+
+/* Fächer */
+.subject{border-top:1px solid var(--line)}
+.subject:last-of-type{border-bottom:1px solid var(--line)}
+.row{width:100%;display:flex;align-items:center;gap:12px;padding:13px 0;text-align:left;min-height:58px}
+.row .name{flex:1;font-weight:500;font-size:17px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
+.tag{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);border:1px solid var(--line2);border-radius:5px;padding:1px 5px;white-space:nowrap}
+.exact{font-size:13px;color:var(--muted);white-space:nowrap}
+.grade{font-size:26px;font-weight:700;min-width:34px;text-align:right;color:hsl(var(--h) var(--gs) var(--gl));line-height:1}
+.grade.none{color:var(--line2)}
+.grade.sm{font-size:20px;min-width:0}
+.chev{width:18px;height:18px;stroke:var(--muted);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:transform .2s;flex-shrink:0}
+.open .chev{transform:rotate(180deg)}
+.detail{padding:0 0 18px}
+.group{padding:6px 0 10px}
+.ghead{display:flex;justify-content:space-between;gap:10px;font-size:13px;color:var(--muted);margin-bottom:7px}
+.ghead b{color:var(--text);font-weight:600}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:baseline;gap:6px;padding:7px 11px;border-radius:9px;background:var(--surface);border:1px solid var(--line);font-size:16px;line-height:1.2}
+.chip .v{font-weight:600;color:hsl(var(--h) var(--gs) var(--gl))}
+.chip small{color:var(--muted);font-size:12px}
+.chip.prev{opacity:.55;padding:5px 9px;font-size:13.5px}
+.chip.prev .hj{font-size:10px;text-transform:uppercase;letter-spacing:.04em}
+.chip.add{border-style:dashed;color:var(--muted);background:transparent}
+.actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.btn{padding:9px 14px;border-radius:9px;font-size:14px;font-weight:500;background:var(--surface);border:1px solid var(--line);white-space:nowrap}
+.btn:active{background:var(--line)}
+.btn.primary{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+.btn.danger{color:var(--red)}
+.btn.armed{background:var(--red);color:#fff;border-color:var(--red)}
+.btn.sm{padding:6px 10px;font-size:13px}
+.btn.block{width:100%;padding:12px}
+.add-subject{margin:14px 0 48px;width:100%;text-align:center;padding:14px;color:var(--muted);border:1px dashed var(--line2);border-radius:12px;font-size:15px}
+.empty{padding:40px 0;text-align:center;color:var(--muted)}
+
+/* Abitur */
+.abi-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;gap:12px}
+.abi-row > span:first-child{flex:1}
+.abi-row small{display:block;font-size:12px;color:var(--muted)}
+.abi-row .ctl{display:flex;align-items:center;gap:10px}
+.calc{margin:8px 0 6px;padding:10px 12px;border-radius:9px;background:var(--surface);border:1px solid var(--line);font-size:13.5px;line-height:1.6}
+.calc b{font-weight:600}
+
+/* Formulare */
+.input{width:100%;padding:10px 12px;border:1px solid var(--line2);border-radius:9px;background:var(--bg);font-size:17px;-webkit-appearance:none;appearance:none}
+.input:focus{outline:none;border-color:var(--accent)}
+.input.small{width:84px;text-align:center;padding:7px 8px}
+.input.big{font-size:26px;font-weight:600;text-align:center;padding:12px}
+.input.w{width:86px;text-align:right}
+select.input{padding-right:32px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center}
+.field{margin-bottom:14px}
+.field > label{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:var(--muted);margin-bottom:5px}
+.sw{appearance:none;-webkit-appearance:none;width:44px;height:26px;border-radius:13px;background:var(--line2);position:relative;flex-shrink:0;cursor:pointer;transition:background .15s}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .15s;box-shadow:0 1px 2px rgba(0,0,0,.25)}
+.sw:checked{background:var(--accent)}
+.sw:checked::after{transform:translateX(18px)}
+:root[data-theme="dark"] .sw:checked::after{background:#121212}
+.seg{display:inline-flex;background:var(--line);border-radius:8px;padding:2px;gap:2px}
+.seg button{padding:5px 11px;border-radius:6px;font-size:13px;color:var(--muted);min-width:34px}
+.seg button.on{background:var(--surface);color:var(--text);font-weight:600}
+.msg-error{color:var(--red);font-size:13px;min-height:18px;margin:-6px 0 8px}
+
+/* Sheets */
+.backdrop{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:10;display:flex;align-items:flex-end;justify-content:center;animation:fade .15s}
+.sheet{background:var(--surface);width:100%;max-width:640px;border-radius:18px 18px 0 0;padding:18px 16px calc(24px + env(safe-area-inset-bottom,0px));max-height:90vh;max-height:90dvh;overflow:auto;animation:up .22s cubic-bezier(.2,.8,.2,1);box-shadow:var(--shadow)}
+@media (min-width:640px){.backdrop{align-items:center}.sheet{border-radius:18px;margin:20px;max-height:85vh}}
+.sheet h2{font-size:18px;font-weight:600;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+.sheet h2 .icon-btn{margin:-8px -8px -8px 0}
+.sheet .note{margin-bottom:14px}
+.sheet-foot{display:flex;gap:8px;margin-top:18px;flex-wrap:wrap}
+.sheet-foot .primary{flex:1}
+.list-item{display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--line)}
+.list-item .grow{flex:1;text-align:left;padding:4px 0;min-width:0;display:flex;align-items:center;gap:8px}
+.list-item .grow .nm{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.list-item .check{color:var(--accent);font-weight:700}
+.opt{width:100%;display:flex;justify-content:space-between;align-items:center;padding:13px 0;border-bottom:1px solid var(--line);text-align:left;font-size:16px}
+.opt:last-of-type{border-bottom:0}
+.opt .check{font-weight:700}
+.result{font-size:24px;font-weight:700;margin:16px 0 6px;letter-spacing:-.01em}
+.result.grade{font-size:34px;min-width:0;text-align:left}
+.result.bad{color:var(--red)}
+.result.good{color:var(--green)}
+.preview{border:1px solid var(--line);border-radius:9px;padding:10px 12px;margin-bottom:14px;font-size:14px;line-height:1.6;background:var(--bg)}
+.unit{font-size:13px;color:var(--muted);width:44px;flex-shrink:0}
+@keyframes fade{from{opacity:0}}
+@keyframes up{from{transform:translateY(24px);opacity:.6}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="hbar">
+      <button class="year-btn" data-action="years" aria-label="Schuljahr wechseln"><span id="yearName"></span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
+      <span class="spacer"></span>
+      <button class="icon-btn" data-action="sort" aria-label="Sortierung"><svg viewBox="0 0 24 24"><path d="M7 4v16M4 17l3 3 3-3M17 20V4M14 7l3-3 3 3"/></svg></button>
+      <button class="icon-btn" data-action="theme" aria-label="Hell/Dunkel umschalten">
+        <svg class="ic-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>
+        <svg class="ic-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+      </button>
+      <button class="icon-btn" data-action="menu" aria-label="Menü"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/></svg></button>
+    </div>
+    <nav class="tabs" aria-label="Bereich">
+      <button data-action="tab" data-tab="h1">1. Halbjahr</button>
+      <button data-action="tab" data-tab="h2">2. Halbjahr</button>
+      <button data-action="tab" data-tab="abi">Abitur</button>
+    </nav>
+  </div>
+</header>
+<main class="wrap" id="main"></main>
+<div id="sheet"></div>
+<input type="file" id="importFile" accept=".json,application/json" hidden>
+<noscript><p class="wrap" style="padding:20px 16px">Diese App benötigt JavaScript.</p></noscript>
+
+<script>
+(function(){
+'use strict';
+const KEY='notenuebersicht.v1';
+const $=(s,r)=>(r||document).querySelector(s);
+const $$=(s,r)=>Array.from((r||document).querySelectorAll(s));
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid=()=>Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice(-4);
+const CHEV='<svg class="chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>';
+const CLOSE='<button class="icon-btn" data-action="close" aria-label="Schließen"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>';
+
+/* ─────────────── Datenmodell ─────────────── */
+function newGroup(name,weight){return{id:uid(),name:name,weight:weight};}
+function newSubject(name){return{id:uid(),name:name,abi:false,countsInAbi:true,abiExam:null,abiOral:null,abiOralOn:false,weightMode:'percent',groups:[newGroup('Schriftlich',50),newGroup('Mündlich',50)],grades:[]};}
+function newYear(name){return{id:uid(),name:name,subjects:[]};}
+function defaultYearName(){const d=new Date();const y=d.getMonth()>=7?d.getFullYear():d.getFullYear()-1;return y+'/'+String(y+1).slice(2);}
+function defaultState(){const y=newYear(defaultYearName());return{version:1,theme:null,sort:'order',tab:'h1',activeYearId:y.id,years:[y]};}
+
+const num=v=>(typeof v==='number'&&isFinite(v))?v:null;
+function gradeNum(v){const n=num(v);if(n===null)return null;const r=Math.round(n*10)/10;return(r>=1&&r<=6)?r:null;}
+
+/* Prüft und normalisiert Rohdaten (localStorage oder Import). Wirft bei ungültigem Format. */
+function normalize(raw){
+  if(!raw||typeof raw!=='object')throw new Error('Die Datei enthält keine gültigen Daten.');
+  const src=(raw.data&&typeof raw.data==='object')?raw.data:raw;
+  if(!Array.isArray(src.years))throw new Error('Keine Schuljahre gefunden – das ist keine Export-Datei dieser App.');
+  const years=src.years.map((y,i)=>{
+    if(!y||typeof y!=='object')throw new Error('Schuljahr '+(i+1)+' ist ungültig.');
+    if(!Array.isArray(y.subjects))throw new Error('Schuljahr „'+(y.name||i+1)+'“ hat keine Fächerliste.');
+    const subjects=y.subjects.map((s,j)=>{
+      if(!s||typeof s!=='object'||typeof s.name!=='string')throw new Error('Fach '+(j+1)+' in „'+(y.name||'')+'“ ist ungültig.');
+      const groups=(Array.isArray(s.groups)?s.groups:[]).map(g=>{
+        if(!g||typeof g.name!=='string')throw new Error('Eine Notengruppe in „'+s.name+'“ ist ungültig.');
+        const w=num(g.weight);return{id:String(g.id||uid()),name:g.name,weight:w===null?0:Math.max(0,w)};
+      });
+      const gids=new Set(groups.map(g=>g.id));
+      const grades=(Array.isArray(s.grades)?s.grades:[]).map(g=>{
+        const v=gradeNum(g&&g.value);
+        if(v===null||!gids.has(String(g.groupId)))throw new Error('Eine Note in „'+s.name+'“ ist ungültig (Wert oder Gruppe).');
+        const ts=num(g.ts);
+        return{id:String(g.id||uid()),groupId:String(g.groupId),half:g.half===2?2:1,value:v,label:typeof g.label==='string'?g.label:'',ts:ts===null?Date.now():ts};
+      });
+      return{id:String(s.id||uid()),name:s.name,abi:!!s.abi,countsInAbi:s.countsInAbi!==false,abiExam:gradeNum(s.abiExam),abiOral:gradeNum(s.abiOral),abiOralOn:!!s.abiOralOn,weightMode:s.weightMode==='factor'?'factor':'percent',groups:groups,grades:grades};
+    });
+    return{id:String(y.id||uid()),name:(typeof y.name==='string'&&y.name)?y.name:'Schuljahr '+(i+1),subjects:subjects};
+  });
+  if(!years.length)years.push(newYear(defaultYearName()));
+  return{
+    version:1,
+    theme:(src.theme==='dark'||src.theme==='light')?src.theme:null,
+    sort:['order','alpha','grade'].indexOf(src.sort)>=0?src.sort:'order',
+    tab:['h1','h2','abi'].indexOf(src.tab)>=0?src.tab:'h1',
+    activeYearId:years.some(y=>y.id===src.activeYearId)?src.activeYearId:years[0].id,
+    years:years
+  };
+}
+function load(){
+  let raw=null;
+  try{raw=localStorage.getItem(KEY);}catch(e){}
+  if(raw){
+    try{return normalize(JSON.parse(raw));}
+    catch(e){console.warn('Gespeicherte Daten unlesbar, Sicherung angelegt:',e);try{localStorage.setItem(KEY+'.backup',raw);}catch(e2){}}
+  }
+  return defaultState();
+}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){console.warn('Speichern fehlgeschlagen',e);}}
+function commit(){save();render();}
+
+let state=load();
+const ui={expanded:new Set(),calc:null};
+
+const activeYear=()=>state.years.find(y=>y.id===state.activeYearId)||state.years[0];
+const findSubject=id=>activeYear().subjects.find(s=>s.id===id);
+
+/* ─────────────── Berechnung ─────────────── */
+function gradesFor(sub,groupId,half){return sub.grades.filter(g=>g.groupId===groupId&&(half===2||g.half===1));}
+function avg(arr){return arr.length?arr.reduce((a,b)=>a+b,0)/arr.length:null;}
+function groupAvg(sub,groupId,half){return avg(gradesFor(sub,groupId,half).map(g=>g.value));}
+function weighted(pairs){ /* [{a,w}] – nur Gruppen mit Noten und Gewicht > 0 */
+  let sw=0,s=0;pairs.forEach(p=>{if(p.a===null||!(p.w>0))return;sw+=p.w;s+=p.w*p.a;});return sw?s/sw:null;
+}
+function subjectExact(sub,half){return weighted(sub.groups.map(g=>({a:groupAvg(sub,g.id,half),w:g.weight})));}
+function roundGrade(x){return x===null?null:Math.round(x+1e-9);} /* kaufmännisch, x,5 → aufrunden */
+function overallAvg(year,half){return avg(year.subjects.map(s=>roundGrade(subjectExact(s,half))).filter(v=>v!==null));}
+
+function abiCalc(sub){
+  const anm=roundGrade(subjectExact(sub,2));
+  const oral=(sub.abiOralOn&&sub.abiOral!==null)?sub.abiOral:null;
+  const parts=[];
+  if(anm!==null)parts.push({label:'Anmeldenote',value:anm,w:1});
+  if(sub.abiExam!==null)parts.push({label:'Prüfung',value:sub.abiExam,w:oral!==null?1:2});
+  if(oral!==null)parts.push({label:'Mündliche Prüfung',value:oral,w:1});
+  const sw=parts.reduce((a,p)=>a+p.w,0);
+  const exact=sw?parts.reduce((a,p)=>a+p.value*p.w,0)/sw:null;
+  return{anm:anm,parts:parts,sw:sw,exact:exact,rounded:roundGrade(exact),withOral:oral!==null};
+}
+function abiExact(sub){return sub.abi?abiCalc(sub).exact:subjectExact(sub,2);}
+function abiValue(sub){return roundGrade(abiExact(sub));}
+function abiAvg(year){return avg(year.subjects.filter(s=>s.countsInAbi).map(abiValue).filter(v=>v!==null));}
+
+/* „Welche Note brauche ich?“ – simuliert eine zusätzliche Note x in Gruppe gid */
+function neededGrade(sub,gid,half,target){
+  const exactWith=x=>weighted(sub.groups.map(g=>{
+    const vals=gradesFor(sub,g.id,half).map(gr=>gr.value);if(g.id===gid)vals.push(x);
+    return{a:avg(vals),w:g.weight};
+  }));
+  const ok=x=>{const e=exactWith(x);return e!==null&&roundGrade(e)<=target;};
+  if(!ok(1))return{status:'impossible',exact:exactWith(1)};
+  if(ok(6))return{status:'secured',exact:exactWith(6)};
+  for(let v=60;v>=10;v--){const x=v/10;if(ok(x))return{status:'ok',value:x,exact:exactWith(x)};}
+  return{status:'impossible',exact:exactWith(1)};
+}
+
+function sortedSubjects(year,key){
+  const arr=year.subjects.slice();
+  const val=s=>key==='abi'?abiExact(s):subjectExact(s,key);
+  if(state.sort==='alpha')arr.sort((a,b)=>a.name.localeCompare(b.name,'de'));
+  else if(state.sort==='grade')arr.sort((a,b)=>{const va=val(a),vb=val(b);if(va===null&&vb===null)return 0;if(va===null)return 1;if(vb===null)return -1;return va-vb;});
+  return arr;
+}
+function setWeightMode(s,mode){
+  if(s.weightMode===mode)return;
+  const pos=s.groups.map(g=>g.weight).filter(w=>w>0);
+  if(mode==='factor'){const min=pos.length?Math.min.apply(null,pos):0;if(min>0)s.groups.forEach(g=>{g.weight=Math.round(g.weight/min*10)/10;});}
+  else{const sum=pos.reduce((a,b)=>a+b,0);if(sum>0)s.groups.forEach(g=>{g.weight=Math.round(g.weight/sum*1000)/10;});}
+  s.weightMode=mode;
+}
+
+/* ─────────────── Formatierung ─────────────── */
+const de=x=>String(x).replace('.',',');
+const fmt1=x=>x===null?'–':de(x.toFixed(1));
+const fmt2=x=>x===null?'–':de(x.toFixed(2));
+const fmtG=v=>v===null?'':(Number.isInteger(v)?String(v):de(v.toFixed(1)));
+const fmtW=w=>de(Math.round(w*10)/10);
+const hue=g=>Math.round(130*(1-(Math.min(6,Math.max(1,g))-1)/5));
+const gradeSpan=(v,cls)=>v===null?'<span class="'+(cls||'grade')+' none">–</span>':'<span class="'+(cls||'grade')+'" style="--h:'+hue(v)+'">'+fmtG(v)+'</span>';
+const weightLabel=(s,g)=>s.weightMode==='percent'?fmtW(g.weight)+' %':fmtW(g.weight)+'-fach';
+const halfName=h=>h===1?'1. Halbjahr':'2. Halbjahr';
+function frac(w,sw){const k=w+'/'+sw;return{'1/1':'voll','1/2':'½','1/3':'⅓','2/3':'⅔'}[k]||k;}
+function parseGrade(str){ /* null = leer, NaN = ungültig */
+  const s=String(str==null?'':str).trim().replace(',','.');if(!s)return null;
+  if(!/^\d+(\.\d+)?$/.test(s))return NaN;
+  const r=Math.round(Number(s)*10)/10;return(r>=1&&r<=6)?r:NaN;
+}
+function parseNum(str){const s=String(str==null?'':str).trim().replace(',','.');if(!s||!/^\d+(\.\d+)?$/.test(s))return null;return Number(s);}
+
+/* ─────────────── Darstellung ─────────────── */
+function effectiveTheme(){return state.theme||(window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');}
+function applyTheme(){
+  const t=effectiveTheme();document.documentElement.setAttribute('data-theme',t);
+  $('#themeColor').content=t==='dark'?'#121212':'#f6f6f3';
+}
+function render(){
+  applyTheme();
+  const year=activeYear();
+  $('#yearName').textContent=year.name;
+  $$('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===state.tab));
+  $('#main').innerHTML=state.tab==='abi'?renderAbi(year):renderHalf(year,state.tab==='h1'?1:2);
+}
+function renderHalf(year,half){
+  const subs=sortedSubjects(year,half);
+  const av=overallAvg(year,half);
+  const n=subs.filter(s=>subjectExact(s,half)!==null).length;
+  let info=subs.length?(n?n+' von '+subs.length+' Fächern mit Noten':'noch keine Noten eingetragen'):'';
+  if(half===2&&subs.length)info+=' · kumulativ mit 1. HJ';
+  let h='<div class="summary"><span class="big'+(av===null?' none':'')+'">'+(av===null?'Ø –':'Ø '+fmt1(av))+'</span><span class="muted">'+info+'</span></div>';
+  if(!subs.length)h+='<p class="empty">Noch keine Fächer in diesem Schuljahr.</p>';
+  h+=subs.map(s=>renderSubject(s,half)).join('');
+  h+='<button class="add-subject" data-action="add-subject">+ Fach hinzufügen</button>';
+  return h;
+}
+function renderSubject(s,half){
+  const open=ui.expanded.has(s.id),ex=subjectExact(s,half),r=roundGrade(ex);
+  let h='<section class="subject'+(open?' open':'')+'"><button class="row" data-action="toggle" data-id="'+s.id+'" aria-expanded="'+open+'">'+
+    '<span class="name">'+esc(s.name)+(s.abi?'<span class="tag">Abi</span>':'')+'</span>'+
+    '<span class="exact">'+(ex===null?'keine Noten':fmt2(ex))+'</span>'+gradeSpan(r)+CHEV+'</button>';
+  if(open){
+    h+='<div class="detail">';
+    if(!s.groups.length)h+='<p class="note">Keine Notengruppen – unter „Einrichten“ anlegen.</p>';
+    s.groups.forEach(g=>{
+      const gs=gradesFor(s,g.id,half).sort((a,b)=>a.half-b.half||a.ts-b.ts),a=groupAvg(s,g.id,half);
+      h+='<div class="group"><div class="ghead"><b>'+esc(g.name)+'</b><span>'+weightLabel(s,g)+(a===null?' · keine Noten':' · Ø '+fmt2(a))+'</span></div><div class="chips">';
+      h+=gs.map(gr=>{const prev=half===2&&gr.half===1;
+        return'<button class="chip'+(prev?' prev':'')+'" data-action="edit-grade" data-id="'+s.id+'" data-grade="'+gr.id+'" style="--h:'+hue(gr.value)+'"><span class="v">'+fmtG(gr.value)+'</span>'+(gr.label?'<small>'+esc(gr.label)+'</small>':'')+(prev?'<small class="hj">1. HJ</small>':'')+'</button>';}).join('');
+      h+='<button class="chip add" data-action="add-grade" data-id="'+s.id+'" data-group="'+g.id+'">+ Note</button></div></div>';
+    });
+    h+='<div class="actions"><button class="btn" data-action="calc" data-id="'+s.id+'">Welche Note brauche ich?</button><button class="btn" data-action="settings" data-id="'+s.id+'">Einrichten</button></div></div>';
+  }
+  return h+'</section>';
+}
+function renderAbi(year){
+  const subs=sortedSubjects(year,'abi'),av=abiAvg(year);
+  const counting=subs.filter(s=>s.countsInAbi&&abiValue(s)!==null).length;
+  let h='<div class="summary"><span class="big'+(av===null?' none':'')+'">'+(av===null?'Ø –':'Ø '+fmt1(av))+'</span><span class="muted">Abitur-Durchschnitt'+(subs.length?' · '+counting+' '+(counting===1?'Fach zählt':'Fächer zählen'):'')+'</span></div>';
+  if(!subs.length)h+='<p class="empty">Noch keine Fächer in diesem Schuljahr.</p>';
+  subs.forEach(s=>{
+    const open=ui.expanded.has(s.id),ex=abiExact(s),r=abiValue(s);
+    h+='<section class="subject'+(open?' open':'')+'"><button class="row" data-action="toggle" data-id="'+s.id+'" aria-expanded="'+open+'">'+
+      '<span class="name">'+esc(s.name)+(s.abi?'<span class="tag">Abi</span>':'')+(s.countsInAbi?'':'<span class="tag">zählt nicht</span>')+'</span>'+
+      '<span class="exact">'+(ex===null?'keine Werte':fmt2(ex))+'</span>'+gradeSpan(r)+CHEV+'</button>';
+    if(open){
+      h+='<div class="detail">';
+      if(s.abi){
+        const c=abiCalc(s);
+        h+='<div class="abi-row"><span>Anmeldenote<small>automatisch aus dem 2. Halbjahr'+(c.anm===null?' – dort noch keine Noten':'')+'</small></span>'+gradeSpan(c.anm,'grade sm')+'</div>';
+        h+='<div class="abi-row"><span>Prüfungsnote</span><input class="input small" inputmode="decimal" placeholder="–" value="'+fmtG(s.abiExam)+'" data-bind="abiExam" data-id="'+s.id+'" aria-label="Prüfungsnote"></div>';
+        h+='<div class="abi-row"><span>Mündliche Prüfung<small>optional</small></span><span class="ctl">'+(s.abiOralOn?'<input class="input small" inputmode="decimal" placeholder="–" value="'+fmtG(s.abiOral)+'" data-bind="abiOral" data-id="'+s.id+'" aria-label="Mündliche Prüfungsnote">':'')+'<input type="checkbox" class="sw" data-bind="abiOralOn" data-id="'+s.id+'"'+(s.abiOralOn?' checked':'')+' aria-label="Mündliche Prüfung ergänzen"></span></div>';
+        if(c.parts.length){
+          const rule=c.withOral?'je ⅓ (mit mündlicher Prüfung)':'⅓ zu ⅔';
+          h+='<div class="calc"><b>Gewichtung:</b> '+c.parts.map(p=>p.label+' '+frac(p.w,c.sw)).join(' · ')+(c.anm===null||s.abiExam===null?'<br><span class="muted">Fehlende Werte werden nicht gewertet – Regel: '+rule+'</span>':'')+
+            '<br>('+c.parts.map(p=>fmtG(p.value)+' × '+p.w).join(' + ')+') / '+c.sw+' = <b>'+fmt2(c.exact)+'</b> → Endnote <b>'+c.rounded+'</b></div>';
+        }else h+='<p class="note">Noch keine Werte – Endnote entsteht aus Anmeldenote und Prüfung.</p>';
+      }else{
+        h+='<p class="note">Kein Abiturfach – es zählt die Fachnote des 2. Halbjahres'+(r===null?' (noch keine Noten)':' ('+fmt2(ex)+' → '+r+')')+'.</p>';
+      }
+      h+='<div class="abi-row"><span>Abiturfach<small>mit Prüfungsnote</small></span><input type="checkbox" class="sw" data-bind="abi" data-id="'+s.id+'"'+(s.abi?' checked':'')+' aria-label="Abiturfach"></div>';
+      h+='<div class="abi-row"><span>Zählt im Abitur-Durchschnitt</span><input type="checkbox" class="sw" data-bind="countsInAbi" data-id="'+s.id+'"'+(s.countsInAbi?' checked':'')+' aria-label="Zählt im Abitur-Durchschnitt"></div>';
+      h+='</div>';
+    }
+    h+='</section>';
+  });
+  h+='<div style="height:48px"></div>';
+  return h;
+}
+
+/* ─────────────── Sheets ─────────────── */
+function openSheet(html){
+  $('#sheet').innerHTML='<div class="backdrop" data-action="close-sheet"><div class="sheet" role="dialog" aria-modal="true">'+html+'</div></div>';
+  document.body.classList.add('sheet-open');
+  const f=$('#sheet [autofocus]');if(f){try{f.focus();}catch(e){}}
+}
+function closeSheet(){$('#sheet').innerHTML='';document.body.classList.remove('sheet-open');ui.calc=null;}
+const head=t=>'<h2>'+t+CLOSE+'</h2>';
+
+function sheetYears(){
+  return head('Schuljahre')+state.years.map(y=>'<div class="list-item"><button class="grow" data-action="select-year" data-id="'+y.id+'"><span class="nm">'+esc(y.name)+'</span><small class="muted">'+y.subjects.length+' '+(y.subjects.length===1?'Fach':'Fächer')+'</small>'+(y.id===state.activeYearId?'<span class="check">✓</span>':'')+'</button><button class="btn sm" data-action="edit-year" data-id="'+y.id+'">Bearbeiten</button></div>').join('')+
+    '<div class="sheet-foot"><button class="btn primary" data-action="new-year">+ Neues Schuljahr</button></div>';
+}
+function sheetYearEdit(id){
+  const y=id?state.years.find(x=>x.id===id):null;
+  return head(y?'Schuljahr bearbeiten':'Neues Schuljahr')+'<form data-form="year" data-id="'+(id||'')+'"><div class="field"><label>Bezeichnung</label><input class="input" name="name" value="'+esc(y?y.name:'')+'" placeholder="z. B. 2025/26" autocomplete="off" autofocus required></div>'+
+    '<div class="sheet-foot"><button type="submit" class="btn primary">'+(y?'Speichern':'Anlegen')+'</button>'+(y?'<button type="button" class="btn danger" data-action="delete-year" data-id="'+y.id+'">Löschen</button>':'')+'</div>'+
+    (y&&y.subjects.length?'<p class="note" style="margin-top:12px">Beim Löschen werden auch alle '+y.subjects.length+' Fächer mit ihren Noten entfernt.</p>':'')+'</form>';
+}
+function sheetNewSubject(){
+  return head('Neues Fach')+'<form data-form="subject"><div class="field"><label>Name</label><input class="input" name="name" placeholder="z. B. Mathematik" autocomplete="off" autofocus required></div><p class="note">Startet mit den Gruppen „Schriftlich“ und „Mündlich“ (je 50 %). Gewichtung später unter „Einrichten“ anpassbar.</p><div class="sheet-foot"><button type="submit" class="btn primary">Hinzufügen</button></div></form>';
+}
+function sheetGrade(subId,groupId,gradeId){
+  const s=findSubject(subId);if(!s)return'';
+  const gr=gradeId?s.grades.find(g=>g.id===gradeId):null;
+  const g=s.groups.find(x=>x.id===(gr?gr.groupId:groupId));if(!g)return'';
+  const half=gr?gr.half:(state.tab==='h2'?2:1);
+  return head(gr?'Note bearbeiten':'Note eintragen')+'<p class="note">'+esc(s.name)+' · '+esc(g.name)+' · '+halfName(half)+'</p>'+
+    '<form data-form="grade" data-id="'+s.id+'" data-group="'+g.id+'" data-grade="'+(gr?gr.id:'')+'" data-half="'+half+'">'+
+    '<div class="field"><label>Note (1,0 bis 6,0)</label><input class="input big" name="value" inputmode="decimal" autocomplete="off" value="'+(gr?fmtG(gr.value):'')+'" autofocus></div>'+
+    '<div class="field"><label>Bezeichnung (optional)</label><input class="input" name="label" autocomplete="off" placeholder="z. B. Klausur 1" value="'+esc(gr?gr.label:'')+'"></div>'+
+    '<p class="msg-error" data-err></p>'+
+    '<div class="sheet-foot"><button type="submit" class="btn primary">Speichern</button>'+(gr?'<button type="button" class="btn danger" data-action="delete-grade" data-id="'+s.id+'" data-grade="'+gr.id+'">Löschen</button>':'')+'</div></form>';
+}
+function weightNote(s){
+  if(!s.groups.length)return'';
+  if(s.weightMode==='percent'){const sum=s.groups.reduce((a,g)=>a+g.weight,0);return Math.abs(sum-100)<0.05?'Summe 100 %.':'Summe '+fmtW(sum)+' % – die Anteile werden im Verhältnis zueinander gerechnet.';}
+  return'Faktoren gelten relativ zueinander (z. B. 2-fach zählt doppelt so viel wie 1-fach).';
+}
+function sheetSubject(id){
+  const s=findSubject(id);if(!s)return'';
+  const idx=activeYear().subjects.indexOf(s),n=activeYear().subjects.length;
+  let h=head('Fach einrichten')+'<div class="field"><label>Name</label><input class="input" data-bind="subject.name" data-id="'+s.id+'" value="'+esc(s.name)+'" autocomplete="off"></div>';
+  h+='<div class="field"><label>Notengruppen &amp; Gewichtung <span class="seg"><button data-action="weight-mode" data-id="'+s.id+'" data-mode="percent" class="'+(s.weightMode==='percent'?'on':'')+'">Prozent</button><button data-action="weight-mode" data-id="'+s.id+'" data-mode="factor" class="'+(s.weightMode==='factor'?'on':'')+'">Faktor</button></span></label>';
+  h+=s.groups.map(g=>'<div class="list-item"><input class="input" data-bind="group.name" data-id="'+s.id+'" data-group="'+g.id+'" value="'+esc(g.name)+'" aria-label="Gruppenname"><input class="input w" inputmode="decimal" data-bind="group.weight" data-id="'+s.id+'" data-group="'+g.id+'" value="'+fmtW(g.weight)+'" aria-label="Gewichtung"><span class="unit">'+(s.weightMode==='percent'?'%':'-fach')+'</span><button class="btn sm danger" data-action="delete-group" data-id="'+s.id+'" data-group="'+g.id+'">Löschen</button></div>').join('');
+  h+='<p class="note" data-weight-note style="margin:8px 0">'+weightNote(s)+' Beim Löschen einer Gruppe werden auch ihre Noten gelöscht.</p>';
+  h+='<button class="btn sm" data-action="add-group" data-id="'+s.id+'">+ Gruppe</button></div>';
+  h+='<div class="abi-row"><span>Abiturfach<small>mit Prüfungsnote im Abitur-Bereich</small></span><input type="checkbox" class="sw" data-bind="abi" data-id="'+s.id+'"'+(s.abi?' checked':'')+'></div>';
+  h+='<div class="abi-row"><span>Zählt im Abitur-Durchschnitt</span><input type="checkbox" class="sw" data-bind="countsInAbi" data-id="'+s.id+'"'+(s.countsInAbi?' checked':'')+'></div>';
+  h+='<div class="abi-row"><span>Position<small>bei Sortierung „Eigene Reihenfolge“</small></span><span class="ctl"><button class="btn sm" data-action="move-subject" data-id="'+s.id+'" data-dir="-1"'+(idx<=0?' disabled':'')+'>↑</button><button class="btn sm" data-action="move-subject" data-id="'+s.id+'" data-dir="1"'+(idx>=n-1?' disabled':'')+'>↓</button></span></div>';
+  h+='<div class="sheet-foot"><button class="btn danger" data-action="delete-subject" data-id="'+s.id+'">Fach löschen</button></div>';
+  return h;
+}
+function sheetCalc(id){
+  const s=findSubject(id);if(!s)return'';
+  const half=state.tab==='h2'?2:1,ex=subjectExact(s,half),r=roundGrade(ex);
+  if(!ui.calc||ui.calc.id!==id)ui.calc={id:id,half:half,group:(s.groups[0]||{}).id,target:r!==null?Math.min(5,r):2};
+  let h=head('Welche Note brauche ich?')+'<p class="note">'+esc(s.name)+' · '+halfName(half)+(half===2?' (kumulativ)':'')+' · aktuell '+(ex===null?'keine Noten':fmt2(ex)+' → '+r)+'</p>';
+  h+='<div class="field"><label>Zielnote (gerundete Fachnote)</label><span class="seg">'+[1,2,3,4,5].map(t=>'<button data-action="calc-target" data-target="'+t+'" class="'+(ui.calc.target===t?'on':'')+'">'+t+'</button>').join('')+'</span></div>';
+  h+='<div class="field"><label>Die nächste Note kommt in</label><select class="input" data-bind="calcGroup">'+s.groups.map(g=>'<option value="'+g.id+'"'+(g.id===ui.calc.group?' selected':'')+'>'+esc(g.name)+' ('+weightLabel(s,g)+')</option>').join('')+'</select></div>';
+  h+='<div data-calc-result>'+calcResult(s)+'</div>';
+  return h;
+}
+function calcResult(s){
+  const c=ui.calc;const g=s.groups.find(x=>x.id===c.group);
+  if(!g)return'<p class="note">Keine Notengruppe vorhanden.</p>';
+  const res=neededGrade(s,g.id,c.half,c.target);
+  if(res.status==='secured')return'<div class="result good">Bereits gesichert</div><p class="note">Selbst mit einer 6,0 in „'+esc(g.name)+'“ bliebe die Fachnote bei '+c.target+' ('+fmt2(res.exact)+').</p>';
+  if(res.status==='impossible')return'<div class="result bad">Mit einer Note nicht mehr erreichbar</div><p class="note">Selbst mit einer 1,0 in „'+esc(g.name)+'“ läge die Fachnote bei '+fmt2(res.exact)+' → '+roundGrade(res.exact)+'.'+(g.weight>0?'':' Die Gruppe hat Gewichtung 0.')+'</p>';
+  return'<div class="result grade" style="--h:'+hue(res.value)+'">mindestens '+fmtG(res.value)+'</div><p class="note">Mit einer '+fmtG(res.value)+' in „'+esc(g.name)+'“ läge die Fachnote bei '+fmt2(res.exact)+' → '+c.target+'. Jede bessere Note reicht ebenfalls.</p>';
+}
+function sheetSort(){
+  const opts=[['order','Eigene Reihenfolge'],['alpha','Alphabetisch'],['grade','Nach Note (beste zuerst)']];
+  return head('Sortierung')+opts.map(o=>'<button class="opt" data-action="set-sort" data-sort="'+o[0]+'"><span>'+o[1]+'</span>'+(state.sort===o[0]?'<span class="check">✓</span>':'')+'</button>').join('');
+}
+function sheetMenu(){
+  const y=activeYear();
+  return head('Daten')+'<button class="opt" data-action="export"><span>Exportieren<small class="muted" style="display:block;font-size:13px">Alle Schuljahre als JSON-Datei sichern</small></span></button>'+
+    '<button class="opt" data-action="import"><span>Importieren<small class="muted" style="display:block;font-size:13px">Sicherung laden – mit Vorschau, ersetzt die aktuellen Daten</small></span></button>'+
+    '<p class="note" style="margin-top:14px">Alle Daten liegen nur in diesem Browser auf diesem Gerät. '+state.years.length+' '+(state.years.length===1?'Schuljahr':'Schuljahre')+', aktuell „'+esc(y.name)+'“.</p>';
+}
+function countAll(st){let subs=0,grades=0;st.years.forEach(y=>{subs+=y.subjects.length;y.subjects.forEach(s=>{grades+=s.grades.length;});});return{years:st.years.length,subs:subs,grades:grades};}
+function sheetImportPreview(){
+  const c=countAll(ui.pendingImport),cur=countAll(state);
+  return head('Import prüfen')+'<div class="preview"><b>In der Datei:</b> '+c.years+' '+(c.years===1?'Schuljahr':'Schuljahre')+', '+c.subs+' Fächer, '+c.grades+' Noten<br>'+ui.pendingImport.years.map(y=>'· '+esc(y.name)+' – '+y.subjects.map(s=>esc(s.name)).join(', ')).join('<br>')+'</div>'+
+    '<p class="note">Beim Bestätigen werden die aktuellen Daten ('+cur.years+' '+(cur.years===1?'Schuljahr':'Schuljahre')+', '+cur.subs+' Fächer, '+cur.grades+' Noten) vollständig ersetzt. Vorher ggf. exportieren.</p>'+
+    '<div class="sheet-foot"><button class="btn primary" data-action="import-confirm">Daten ersetzen</button><button class="btn" data-action="close">Abbrechen</button></div>';
+}
+function sheetMessage(title,msg){return head(title)+'<p class="note">'+esc(msg)+'</p><div class="sheet-foot"><button class="btn primary" data-action="close">OK</button></div>';}
+
+/* ─────────────── Zweistufiges Löschen ─────────────── */
+function arm(btn,fn){
+  if(btn.dataset.armed){disarm(btn);fn();return;}
+  btn.dataset.armed='1';btn.dataset.label=btn.textContent;btn.textContent='Wirklich löschen?';btn.classList.add('armed');
+  btn._t=setTimeout(()=>disarm(btn),5000);
+}
+function disarm(btn){if(!btn||!btn.dataset.armed)return;clearTimeout(btn._t);delete btn.dataset.armed;btn.textContent=btn.dataset.label;btn.classList.remove('armed');}
+
+/* ─────────────── Aktionen ─────────────── */
+const actions={
+  toggle:d=>{ui.expanded.has(d.id)?ui.expanded.delete(d.id):ui.expanded.add(d.id);render();},
+  tab:d=>{state.tab=d.tab;commit();},
+  years:()=>openSheet(sheetYears()),
+  'select-year':d=>{state.activeYearId=d.id;ui.expanded.clear();commit();closeSheet();},
+  'edit-year':d=>openSheet(sheetYearEdit(d.id)),
+  'new-year':()=>openSheet(sheetYearEdit(null)),
+  'delete-year':(d,el)=>arm(el,()=>{
+    state.years=state.years.filter(y=>y.id!==d.id);
+    if(!state.years.length)state.years.push(newYear(defaultYearName()));
+    if(!state.years.some(y=>y.id===state.activeYearId))state.activeYearId=state.years[0].id;
+    ui.expanded.clear();commit();openSheet(sheetYears());
+  }),
+  theme:()=>{state.theme=effectiveTheme()==='dark'?'light':'dark';commit();},
+  sort:()=>openSheet(sheetSort()),
+  'set-sort':d=>{state.sort=d.sort;commit();closeSheet();},
+  menu:()=>openSheet(sheetMenu()),
+  export:()=>{exportData();closeSheet();},
+  import:()=>{const f=$('#importFile');f.value='';f.click();},
+  'import-confirm':()=>{
+    if(!ui.pendingImport)return;const theme=state.theme;state=ui.pendingImport;state.theme=theme;ui.pendingImport=null;ui.expanded.clear();commit();closeSheet();
+  },
+  'add-subject':()=>openSheet(sheetNewSubject()),
+  settings:d=>openSheet(sheetSubject(d.id)),
+  'add-group':d=>{const s=findSubject(d.id);if(!s)return;s.groups.push(newGroup('Neue Gruppe',s.weightMode==='percent'?0:1));commit();openSheet(sheetSubject(d.id));},
+  'delete-group':(d,el)=>arm(el,()=>{const s=findSubject(d.id);if(!s)return;s.groups=s.groups.filter(g=>g.id!==d.group);s.grades=s.grades.filter(g=>g.groupId!==d.group);commit();openSheet(sheetSubject(d.id));}),
+  'weight-mode':d=>{const s=findSubject(d.id);if(!s)return;setWeightMode(s,d.mode);commit();openSheet(sheetSubject(d.id));},
+  'move-subject':d=>{const arr=activeYear().subjects,i=arr.findIndex(s=>s.id===d.id),j=i+Number(d.dir);if(i<0||j<0||j>=arr.length)return;const t=arr[i];arr[i]=arr[j];arr[j]=t;commit();openSheet(sheetSubject(d.id));},
+  'delete-subject':(d,el)=>arm(el,()=>{const y=activeYear();y.subjects=y.subjects.filter(s=>s.id!==d.id);ui.expanded.delete(d.id);commit();closeSheet();}),
+  'add-grade':d=>openSheet(sheetGrade(d.id,d.group,null)),
+  'edit-grade':d=>openSheet(sheetGrade(d.id,null,d.grade)),
+  'delete-grade':(d,el)=>arm(el,()=>{const s=findSubject(d.id);if(!s)return;s.grades=s.grades.filter(g=>g.id!==d.grade);commit();closeSheet();}),
+  calc:d=>{ui.calc=null;openSheet(sheetCalc(d.id));},
+  'calc-target':d=>{if(!ui.calc)return;ui.calc.target=Number(d.target);openSheet(sheetCalc(ui.calc.id));},
+  close:()=>closeSheet()
+};
+
+document.addEventListener('click',e=>{
+  const el=e.target.closest('[data-action]');
+  $$('[data-armed]').forEach(b=>{if(b!==el)disarm(b);});
+  if(!el)return;
+  const a=el.dataset.action;
+  if(a==='close-sheet'){if(e.target===el)closeSheet();return;}
+  if(el.disabled)return;
+  const fn=actions[a];if(fn){e.preventDefault();fn(el.dataset,el,e);}
+});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('#sheet .backdrop'))closeSheet();});
+
+/* Formulare */
+document.addEventListener('submit',e=>{
+  const f=e.target.closest('[data-form]');if(!f)return;e.preventDefault();
+  const d=f.dataset,kind=d.form;
+  if(kind==='year'){
+    const name=f.name.value.trim();if(!name)return;
+    if(d.id){const y=state.years.find(x=>x.id===d.id);if(y)y.name=name;}
+    else{const y=newYear(name);state.years.push(y);state.activeYearId=y.id;ui.expanded.clear();}
+    commit();openSheet(sheetYears());
+  }else if(kind==='subject'){
+    const name=f.name.value.trim();if(!name)return;
+    const s=newSubject(name);activeYear().subjects.push(s);ui.expanded.add(s.id);commit();closeSheet();
+  }else if(kind==='grade'){
+    const s=findSubject(d.id);if(!s)return;
+    const v=parseGrade(f.value.value),err=$('[data-err]',f);
+    if(v===null){err.textContent='Bitte eine Note eingeben.';return;}
+    if(Number.isNaN(v)){err.textContent='Ungültig – erlaubt sind 1,0 bis 6,0 mit höchstens einer Nachkommastelle.';return;}
+    const label=f.label.value.trim();
+    if(d.grade){const g=s.grades.find(x=>x.id===d.grade);if(g){g.value=v;g.label=label;}}
+    else s.grades.push({id:uid(),groupId:d.group,half:Number(d.half),value:v,label:label,ts:Date.now()});
+    commit();closeSheet();
+  }
+});
+
+/* Live gebundene Felder */
+document.addEventListener('input',e=>{
+  const el=e.target.closest('[data-bind]');if(!el)return;
+  const b=el.dataset.bind,s=findSubject(el.dataset.id);if(!s)return;
+  if(b==='subject.name'){s.name=el.value.trim()||s.name;save();render();}
+  else if(b==='group.name'){const g=s.groups.find(x=>x.id===el.dataset.group);if(g){g.name=el.value.trim()||g.name;save();render();}}
+});
+document.addEventListener('change',e=>{
+  const el=e.target.closest('[data-bind]');if(!el)return;
+  const b=el.dataset.bind;
+  if(b==='calcGroup'){if(!ui.calc)return;ui.calc.group=el.value;const s=findSubject(ui.calc.id);if(s)$('[data-calc-result]').innerHTML=calcResult(s);return;}
+  const s=findSubject(el.dataset.id);if(!s)return;
+  if(b==='group.weight'){
+    const g=s.groups.find(x=>x.id===el.dataset.group);if(!g)return;
+    const n=parseNum(el.value);if(n===null){el.value=fmtW(g.weight);return;}
+    g.weight=Math.max(0,n);el.value=fmtW(g.weight);save();render();
+    const wn=$('[data-weight-note]');if(wn)wn.textContent=weightNote(s)+' Beim Löschen einer Gruppe werden auch ihre Noten gelöscht.';
+  }else if(b==='abiExam'||b==='abiOral'){
+    const v=parseGrade(el.value);if(Number.isNaN(v)){el.value=fmtG(s[b]);el.focus();return;}
+    s[b]=v;commit();
+  }else if(b==='abiOralOn'||b==='countsInAbi'||b==='abi'){
+    s[b]=el.checked;commit();
+  }
+});
+
+/* ─────────────── Export / Import ─────────────── */
+function exportData(){
+  const date=new Date().toISOString().slice(0,10);
+  const json=JSON.stringify({app:'notenuebersicht',version:1,exportedAt:new Date().toISOString(),data:state},null,2);
+  const name='noten-'+date+'.json';
+  const blob=new Blob([json],{type:'application/json'});
+  /* Als Artifact auf claude.ai: Speichern läuft über die Plattform (Viewer bestätigt). */
+  if(window.claude&&typeof window.claude.use==='function'){
+    window.claude.use('downloads').then(dl=>{
+      if(!dl)return fallbackDownload();
+      return dl.save({filename:name,data:json}).catch(err=>{if(!err||err.code!=='declined')openSheet(sheetMessage('Export nicht möglich',(err&&err.message)||'Speichern ist in dieser Ansicht nicht verfügbar.'));});
+    });
+    return;
+  }
+  fallbackDownload();
+  function fallbackDownload(){
+  try{
+    const file=new File([blob],name,{type:'application/json'});
+    if(navigator.canShare&&navigator.canShare({files:[file]})&&/iPhone|iPad|Android/i.test(navigator.userAgent)){navigator.share({files:[file],title:name}).catch(()=>{});return;}
+  }catch(e){}
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},2000);
+  }
+}
+$('#importFile').addEventListener('change',e=>{
+  const file=e.target.files&&e.target.files[0];if(!file)return;
+  const rd=new FileReader();
+  rd.onload=()=>{
+    try{const parsed=JSON.parse(String(rd.result));ui.pendingImport=normalize(parsed);openSheet(sheetImportPreview());}
+    catch(err){ui.pendingImport=null;openSheet(sheetMessage('Import abgelehnt',(err&&err.message&&!/JSON/i.test(err.message)?err.message:'Die Datei ist kein gültiges JSON.')+' Die bestehenden Daten wurden nicht verändert.'));}
+  };
+  rd.onerror=()=>openSheet(sheetMessage('Import abgelehnt','Die Datei konnte nicht gelesen werden. Die bestehenden Daten wurden nicht verändert.'));
+  rd.readAsText(file);
+});
+
+/* ─────────────── PWA: Icon, Manifest, Offline ─────────────── */
+function setupPWA(){
+  try{
+    const c=document.createElement('canvas');c.width=c.height=180;const x=c.getContext('2d');
+    x.fillStyle='#1c1c1e';x.fillRect(0,0,180,180);
+    x.fillStyle='#ffffff';x.font='700 120px -apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillText('1',88,96);
+    const png=c.toDataURL('image/png');
+    $('#touchIcon').href=png;$('#favIcon').href=png;
+    const m={name:'Notenübersicht',short_name:'Noten',start_url:location.href.split('#')[0],scope:new URL('./',location.href).href,display:'standalone',background_color:'#f6f6f3',theme_color:'#f6f6f3',icons:[{src:png,sizes:'180x180',type:'image/png'}]};
+    $('#manifest').href='data:application/manifest+json;charset=utf-8,'+encodeURIComponent(JSON.stringify(m));
+  }catch(e){}
+  /* Offline: sw.js neben dieser Datei wird registriert, falls vorhanden (nur über http/https möglich). */
+  if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol)){navigator.serviceWorker.register('sw.js').catch(()=>{});}
+}
+if(window.matchMedia){matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{if(!state.theme)applyTheme();});}
+
+render();
+setupPWA();
+})();
+</script>
+</body>
+</html>

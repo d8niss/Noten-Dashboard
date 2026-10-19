@@ -366,7 +366,7 @@ function render(){
 function renderHalf(year,half){
   const subs=sortedSubjects(year,half);
   const av=overallAvg(year,half);
-  const info=half===1?'Durchschnitt 1. Halbjahr':'Durchschnitt · alle Noten des Schuljahres';
+  const info='Durchschnitt '+half+'. Halbjahr';
   let h='<div class="summary"><span class="big'+(av===null?' none':'')+'">'+(av===null?'Ø –':'Ø '+fmt1(av))+'</span><span class="muted">'+info+'</span></div>';
   if(!subs.length)h+='<p class="empty">Noch keine Fächer in diesem Schuljahr.</p>';
   h+=subs.map(s=>renderSubject(s,half)).join('');
